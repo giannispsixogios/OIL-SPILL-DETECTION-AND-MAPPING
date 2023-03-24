@@ -1,0 +1,142 @@
+
+source of code (Registration needed in Google Earth Engine) : https://code.earthengine.google.com/8b4592731856e6b25960b8ba6cb873aa
+
+
+//tier1 aquisitions
+var S2_1 = ee.ImageCollection('COPERNICUS/S2_SR')
+                  .filterBounds(geometry1);
+
+var S2_1 = S2_1.filterMetadata('CLOUD_COVERAGE_ASSESSMENT', 'less_than', 10);
+
+            
+var S2_1 = S2_1.filterDate('2021-12-26','2022-01-20');
+
+print(S2_1.size());
+
+            
+var S2_image = S2_1.first();
+
+var S2_clipped_collection1 = S2_1.map(function (S2_image){
+  return S2_image.clip(geometry1);
+});
+
+
+var S2_image = S2_image.select('B2');
+
+var S2_clipped_collection1 = S2_clipped_collection1
+  .reduce(ee.Reducer.mean())
+  .reproject(S2_image.projection());
+
+
+
+var S2_clipped_collection1 = S2_clipped_collection1.select( 'B2_mean', 'B3_mean', 'B4_mean', 'B5_mean', 'B6_mean', 'B7_mean', 'B8_mean', 'B11_mean','B12_mean');
+
+Map.addLayer(S2_clipped_collection1, {bands:['B4_mean', 'B3_mean', 'B2_mean'], min:100, max:1600}, "S2_clipped_collection1");
+
+
+
+
+//tier2 acquisitions
+var S2_2 = ee.ImageCollection('COPERNICUS/S2_SR')
+                  .filterBounds(geometry1);
+
+var S2_2 = S2_2.filterMetadata('CLOUD_COVERAGE_ASSESSMENT', 'less_than', 10);
+
+            
+var S2_2 = S2_2.filterDate('2022-01-20','2022-02-08');
+
+print(S2_2.size());
+
+            
+var S2_image1 = S2_2.first();
+
+var S2_clipped_collection2 = S2_2.map(function (S2_image1){
+  return S2_image1.clip(geometry1);
+});
+
+
+var S2_image1 = S2_image1.select('B2');
+
+var S2_clipped_collection2 = S2_clipped_collection2
+  .reduce(ee.Reducer.mean())
+  .reproject(S2_image1.projection());
+
+
+
+var S2_clipped_collection2 = S2_clipped_collection2.select( 'B2_mean', 'B3_mean', 'B4_mean', 'B5_mean', 'B6_mean', 'B7_mean', 'B8_mean', 'B11_mean','B12_mean');
+
+Map.addLayer(S2_clipped_collection2, {bands:['B4_mean', 'B3_mean', 'B2_mean'], min:500, max:2500}, "S2_clipped_collection2");
+
+
+
+
+
+
+var RED = S2_clipped_collection1.select('B4_mean');    // RED
+var GREEN = S2_clipped_collection1.select('B3_mean');  // GREEN
+var BLUE = S2_clipped_collection1.select('B2_mean');   // BLUE
+
+var RED2 = S2_clipped_collection2.select('B4_mean');    // RED2
+var GREEN2 = S2_clipped_collection2.select('B3_mean');  // GREEN2
+var BLUE2 = S2_clipped_collection2.select('B2_mean');   // BLUE2
+ 
+ 
+
+// Use the expression function to generate OSI.
+var osi = ((RED.add(GREEN)).divide(BLUE)).rename('OSI');
+
+print(osi);
+
+Map.addLayer(osi, {max: 4.16 , min: 1.21},'OSI',false);
+
+
+
+var thres = osi.gte(2.21).rename('thres')
+
+var  thres1 = S2_clipped_collection1.addBands(osi).addBands(thres);
+thres1 = thres1.select("thres")
+print(thres1)
+
+
+
+Map.addLayer(thres1, {max: 1 , min: 0.53},'OSI_katofli1',false);
+
+
+
+
+
+// Use the expression function to generate OSI2.
+var osi2 = ((RED2.add(GREEN2)).divide(BLUE2)).rename('OSI2');
+
+print(osi2);
+Map.addLayer(osi2, {max: 2.338 , min: 1.769},'OSI2',false);
+
+
+var thres2 = osi2.gte(1.9).rename('thres2');
+
+var  thres2 = S2_clipped_collection2.addBands(osi2).addBands(thres2);
+thres2 = thres2.select("thres2");
+print(thres2);
+
+
+
+Map.addLayer(thres2, {max: 1 , min: 0.57},'OSI_katofli2',false);
+
+
+var diafora = thres1.subtract(thres2);
+
+print(diafora);
+
+Map.addLayer(diafora, {max: 0 , min: -1},'OSI_diafora',false);
+
+
+//Export.image.toDrive({
+//image: katofli2,
+  //description: 'katofli2222',
+  //region: geometry1,
+  //maxPixels: 1e9
+//});
+
+
+
+
